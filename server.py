@@ -196,18 +196,31 @@ def model_info(pid):
     if time.time() - _model["t"] < 30 and _model["v"].get("pid") == pid:
         return _model["v"]
     v = {"pid": pid}
-    try:
-        with urllib.request.urlopen(MODELS_URL, timeout=2) as r:
-            data = json.load(r).get("data") or []
-        if data:
-            v.update(id=data[0].get("id"), name=data[0].get("name"),
-                     context_length=data[0].get("context_length"))
-    except Exception:  # server down or not ds4: show what the command line gives
-        pass
-    if pid:
+    if pid:  # with ds4-server down, another server on the port must not show here
+        try:
+            with urllib.request.urlopen(MODELS_URL, timeout=2) as r:
+                data = json.load(r).get("data") or []
+            if data and data[0].get("owned_by") == "ds4.c":
+                v.update(id=data[0].get("id"), name=data[0].get("name"),
+                         context_length=data[0].get("context_length"))
+        except Exception:  # unreachable or not JSON: show what the command line gives
+            pass
+        # ps joins argv with spaces, so a value is re-joined up to the token that
+        # ends in .gguf; anything that never does is left out rather than guessed
         args = sh("ps", "-ww", "-o", "command=", "-p", str(pid)).split()
         def arg(flag):
-            return args[args.index(flag) + 1] if flag in args and args.index(flag) + 1 < len(args) else None
+            for i, a in enumerate(args):
+                if a.startswith(flag + "="):
+                    rest = [a[len(flag) + 1:]] + args[i + 1:]
+                elif a == flag:
+                    rest = args[i + 1:]
+                else:
+                    continue
+                for j in range(len(rest)):
+                    if rest[j].endswith(".gguf"):
+                        return " ".join(rest[:j + 1])
+                return None
+            return None
         gguf = arg("-m") or arg("--model")
         v.update(gguf=os.path.basename(gguf) if gguf else None, dspark="--dspark" in args,
                  vision=os.path.basename(arg("--vision")) if arg("--vision") else None,
