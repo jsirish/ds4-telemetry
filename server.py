@@ -139,9 +139,12 @@ def tail():
         try:
             st = os.stat(LOG)
             if inode != st.st_ino or st.st_size < pos:
+                # A new file means a new server; a truncated one (log rotation)
+                # does not, and its startup lines with the engine figures are gone.
+                if inode != st.st_ino:
+                    with lock:
+                        S["engine"] = {}
                 pos, inode = 0, st.st_ino
-                with lock:
-                    S["engine"] = {}
             with open(LOG, "r", errors="replace") as f:
                 f.seek(pos)
                 for line in f:
