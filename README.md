@@ -2,6 +2,8 @@
 
 Read-only live telemetry page for a local [DwarfStar](https://github.com/antirez/ds4) `ds4-server`. Stdlib Python, one HTML file, no CDN.
 
+![Dashboard serving DeepSeek V4.1 Flash with DSpark on an M3 Ultra](docs/screenshot.png)
+
 It scrapes the server's Prometheus `GET /metrics` endpoint every second when the server has one ([antirez/ds4#1086](https://github.com/antirez/ds4/pull/1086)), and otherwise falls back to following the server log. Per-request detail in the recent-requests table always comes from the log.
 
 ## Run
