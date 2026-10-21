@@ -12,6 +12,7 @@ import signal
 import subprocess
 import threading
 import time
+import urllib.request
 from collections import deque
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -185,6 +186,49 @@ def ds4_proc():
     return {"alive": True, "pid": pid, "rss_gib": int(out[0]) / 1048576, "uptime": out[1]}
 
 
+_model = {"t": 0, "v": {}}
+MODELS_URL = METRICS_URL.rsplit("/metrics", 1)[0] + "/v1/models"
+
+
+def model_info(pid):
+    """Loaded model: name and context from /v1/models, file and options from the
+    server's command line. Refreshed every 30 s; both change only on restart."""
+    if time.time() - _model["t"] < 30 and _model["v"].get("pid") == pid:
+        return _model["v"]
+    v = {"pid": pid}
+    if pid:  # with ds4-server down, another server on the port must not show here
+        try:
+            with urllib.request.urlopen(MODELS_URL, timeout=2) as r:
+                data = json.load(r).get("data") or []
+            if data and data[0].get("owned_by") == "ds4.c":
+                v.update(id=data[0].get("id"), name=data[0].get("name"),
+                         context_length=data[0].get("context_length"))
+        except Exception:  # unreachable or not JSON: show what the command line gives
+            pass
+        # ps joins argv with spaces, so a value is re-joined up to the token that
+        # ends in .gguf; anything that never does is left out rather than guessed
+        args = sh("ps", "-ww", "-o", "command=", "-p", str(pid)).split()
+        def arg(flag):
+            for i, a in enumerate(args):
+                if a.startswith(flag + "="):
+                    rest = [a[len(flag) + 1:]] + args[i + 1:]
+                elif a == flag:
+                    rest = args[i + 1:]
+                else:
+                    continue
+                for j in range(len(rest)):
+                    if rest[j].endswith(".gguf"):
+                        return " ".join(rest[:j + 1])
+                return None
+            return None
+        gguf = arg("-m") or arg("--model")
+        v.update(gguf=os.path.basename(gguf) if gguf else None, dspark="--dspark" in args,
+                 vision=os.path.basename(arg("--vision")) if arg("--vision") else None,
+                 drafter=os.path.basename(arg("--mtp-model")) if arg("--mtp-model") else None)
+    _model["v"], _model["t"] = v, time.time()
+    return v
+
+
 _gpu = {"t": 0, "v": {}}
 
 
@@ -249,6 +293,7 @@ def snapshot():
     out["metrics"] = SCRAPER.live()
     out["alltime"] = SCRAPER.alltime()
     out["proc"] = ds4_proc()
+    out["model"] = model_info(out["proc"].get("pid"))
     out["system"] = system()
     dec = [r["decode_avg"] for r in recent if r.get("decode_avg")]
     pre = [r["prefill_avg"] for r in recent if r.get("prefill_avg")]
