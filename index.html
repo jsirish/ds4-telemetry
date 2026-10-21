@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DS4 Telemetry</title>
+<link rel="icon" href="data:,">
+<style>
+:root{
+  color-scheme:light dark;
+  --surface-window:#fff;--surface-sidebar:#f9f9f9;--surface-control:#f1f1f1;
+  --text-primary:#262626;--text-secondary:#707070;--text-tertiary:#858585;--separator:#e8e8e8;
+  --accent:#007aff;--system-orange:#ff9500;--system-purple:#af52de;--system-teal:#2aa198;
+  --status-ok:#30b94a;--status-error:#c52d29;
+  --heat0:#eef0f2;--heat:#30b94a;
+  --gutter:16px;--page-title:1.625rem;--body-size:.8125rem;--annotation:.6875rem;
+}
+@media (prefers-color-scheme:dark){:root{
+  --surface-window:#1e1e1e;--surface-sidebar:#262626;--surface-control:#2e2e2e;
+  --text-primary:#ececec;--text-secondary:#a0a0a0;--text-tertiary:#8a8a8a;--separator:#3a3a3a;
+  --accent:#0a84ff;--system-orange:#ff9f0a;--system-purple:#bf5af2;--system-teal:#40c8b8;
+  --status-ok:#32d74b;--status-error:#ff6961;--heat0:#2e2e2e;--heat:#32d74b;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface-window);color:var(--text-primary);
+  font:var(--body-size)/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif}
+main{max-width:1200px;margin:0 auto;padding:var(--gutter)}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:var(--gutter)}
+h1{font-size:var(--page-title);margin:0;font-weight:600}
+h1 small,.src{font-size:var(--annotation);color:var(--text-secondary);font-weight:400;margin-left:8px}
+.hdr-r{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;
+  background:var(--surface-control);font-size:var(--annotation);text-transform:uppercase;letter-spacing:.04em}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--text-tertiary)}
+.pill.ok .dot{background:var(--status-ok)}.pill.busy .dot{background:var(--system-orange);animation:pulse 1.2s infinite}
+.pill.err .dot{background:var(--status-error)}
+@keyframes pulse{50%{opacity:.35}}
+.grid{display:grid;gap:var(--gutter);grid-template-columns:repeat(12,1fr);margin-bottom:var(--gutter)}
+.card{background:var(--surface-sidebar);border:1px solid var(--separator);border-radius:10px;padding:14px 16px;min-width:0}
+.c2{grid-column:span 2}.c3{grid-column:span 3}.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c7{grid-column:span 7}.c8{grid-column:span 8}.c12{grid-column:span 12}
+@media (max-width:900px){.c2,.c3{grid-column:span 6}.c4,.c5,.c6,.c7,.c8{grid-column:span 12}}
+h2{font-size:var(--annotation);margin:0 0 8px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.06em;font-weight:600;display:flex;justify-content:space-between;gap:8px}
+h2 em{font-style:normal;text-transform:none;letter-spacing:0;font-weight:400;color:var(--text-tertiary)}
+.section{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:22px 0 10px;flex-wrap:wrap}
+.section h3{margin:0;font-size:1rem;font-weight:600}
+.section .note{color:var(--text-tertiary);font-size:var(--annotation)}
+.big{font-size:2.1rem;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.big small{font-size:var(--body-size);color:var(--text-secondary);font-weight:400;margin-left:4px}
+.mid{font-size:1.45rem;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.15}
+.mid small{font-size:var(--annotation);color:var(--text-secondary);font-weight:400;margin-left:3px}
+.sub{color:var(--text-secondary);font-size:var(--annotation);margin-top:4px;font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:4px;background:var(--surface-control);overflow:hidden;margin-top:8px;display:flex}
+.bar>i{display:block;height:100%;background:var(--accent);width:0;transition:width .4s}
+.bar.warn>i{background:var(--system-orange)}.bar.err>i{background:var(--status-error)}
+canvas{width:100%;display:block}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:var(--annotation);color:var(--text-secondary);margin-top:6px}
+.legend b{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th{font-size:var(--annotation);text-align:right;color:var(--text-secondary);font-weight:600;padding:4px 8px;border-bottom:1px solid var(--separator)}
+td{padding:5px 8px;text-align:right;border-bottom:1px solid var(--separator)}
+th:first-child,td:first-child{text-align:left}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 14px}
+.kv span:nth-child(odd){color:var(--text-secondary)}.kv span:nth-child(even){text-align:right;font-variant-numeric:tabular-nums}
+.empty{color:var(--text-tertiary);padding:14px 0;text-align:center}
+.seg{display:inline-flex;background:var(--surface-control);border-radius:7px;padding:2px}
+.seg button{border:0;background:none;color:var(--text-secondary);font:inherit;font-size:var(--annotation);padding:3px 11px;border-radius:5px;cursor:pointer}
+.seg button.on{background:var(--surface-window);color:var(--text-primary);box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.hist{display:flex;align-items:flex-end;gap:3px;height:92px;margin-top:10px}
+.hist>div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;min-width:0}
+.hist i{display:block;width:100%;background:var(--system-purple);border-radius:3px 3px 0 0;min-height:1px}
+.hist span{font-size:.625rem;color:var(--text-tertiary);margin-top:2px;font-variant-numeric:tabular-nums}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{background:var(--surface-control);border-radius:999px;padding:2px 9px;font-size:var(--annotation);font-variant-numeric:tabular-nums}
+.chip b{font-weight:600}
+.split{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:8px;background:var(--surface-control)}
+.split i{display:block;height:100%}
+.rec{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--gutter)}
+@media (max-width:900px){.rec{grid-template-columns:repeat(2,1fr)}}
+.heat{display:grid;grid-template-columns:28px repeat(24,minmax(0,1fr));gap:2px;margin-top:6px;font-size:.625rem;color:var(--text-tertiary)}
+.heat i{display:block;aspect-ratio:1;border-radius:2px;background:var(--heat0)}
+.heat span{text-align:center;line-height:1.6}
+.heat span.d{text-align:left}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>DS4 Telemetry<small id="eng"></small></h1>
+  <div class="hdr-r"><span class="src" id="src"></span>
+    <span class="pill" id="state"><span class="dot"></span><span id="statetxt">connecting</span></span></div>
+</header>
+
+<!-- Real time -->
+<div class="grid">
+  <section class="card c12" id="queuebar" hidden style="padding:10px 16px;display:flex;gap:24px;align-items:center;flex-wrap:wrap">
+    <div><span class="mid" id="q_run">0</span> <span class="sub" style="display:inline">running</span></div>
+    <div><span class="mid" id="q_wait">0</span> <span class="sub" style="display:inline">queued</span></div>
+    <div class="sub" id="q_note" style="margin:0"></div>
+    <canvas id="qspark" style="height:28px;flex:1;min-width:120px"></canvas>
+  </section>
+  <section class="card c3"><h2>Decode</h2><div class="big" id="dec">&mdash;<small>tok/s</small></div><div class="sub" id="decsub">&nbsp;</div></section>
+  <section class="card c3"><h2>Prefill</h2><div class="big" id="pre">&mdash;<small>tok/s</small></div>
+    <div class="sub" id="presub">&nbsp;</div><div class="bar" id="prebar"><i></i></div></section>
+  <section class="card c3"><h2>Context</h2><div class="big" id="ctx">&mdash;</div>
+    <div class="sub" id="ctxsub">&nbsp;</div><div class="bar" id="ctxbar"><i></i></div></section>
+  <section class="card c3"><h2>DSpark acceptance <em>last 30s</em></h2><div class="big" id="accnow">&mdash;</div>
+    <div class="sub" id="accnowsub">&nbsp;</div></section>
+
+  <section class="card c8"><h2>Throughput <em>last 10 min</em></h2>
+    <canvas id="chart" style="height:200px"></canvas>
+    <div class="legend"><span><b style="background:var(--accent)"></b>decode tok/s</span><span><b style="background:var(--system-purple)"></b>prefill tok/s (right axis)</span>
+      <span id="acclegend"><b style="background:var(--system-orange)"></b>DSpark acceptance %</span></div>
+  </section>
+  <section class="card c4"><h2>Engine and memory</h2><div class="kv" id="mem"></div></section>
+</div>
+
+<!-- Totals -->
+<div class="section">
+  <h3>Totals</h3>
+  <span class="note" id="scopenote"></span>
+  <div class="seg" id="scope"><button data-v="session">Session</button><button data-v="alltime">All-time</button></div>
+</div>
+<div class="grid" id="totals">
+  <section class="card c2"><h2>Requests</h2><div class="mid" id="t_req">&mdash;</div><div class="sub" id="t_reqsub">&nbsp;</div></section>
+  <section class="card c2"><h2>Prompt tokens</h2><div class="mid" id="t_prompt">&mdash;</div><div class="sub">evaluated by prefill</div></section>
+  <section class="card c2"><h2>Cache efficiency</h2><div class="mid" id="t_cache">&mdash;</div><div class="sub" id="t_cachesub">&nbsp;</div></section>
+  <section class="card c2"><h2>Generated</h2><div class="mid" id="t_gen">&mdash;</div>
+    <div class="split" id="t_gensplit"></div><div class="sub" id="t_gensub">&nbsp;</div></section>
+  <section class="card c2"><h2>Avg prefill</h2><div class="mid" id="t_apre">&mdash;</div><div class="sub" id="t_apresub">excl. cached</div></section>
+  <section class="card c2"><h2>Avg decode</h2><div class="mid" id="t_adec">&mdash;</div><div class="sub" id="t_adecsub">&nbsp;</div></section>
+
+  <section class="card c4" id="speccard"><h2>Speculative decode (DSpark)</h2>
+    <div class="big" id="acc">&mdash;</div><div class="sub" id="accsub">&nbsp;</div>
+    <div class="hist" id="hist"></div><div class="sub">cycles by draft tokens accepted</div></section>
+  <section class="card c4"><h2>Latency</h2><div class="kv" id="lat"></div>
+    <h2 style="margin-top:12px">Finish reasons</h2><div class="chips" id="fin"></div></section>
+  <section class="card c4"><h2>Prompt cache</h2><div class="kv" id="cache"></div>
+    <div class="chips" id="srcs"></div><div class="chips" id="miss"></div></section>
+</div>
+
+<!-- Records -->
+<div class="section"><h3>Records</h3><span class="note">all-time; speeds are the server's per-request averages</span></div>
+<div class="rec" id="records"></div>
+
+<!-- History -->
+<div class="section">
+  <h3>Usage history</h3><span class="note" id="histnote"></span>
+  <div class="seg" id="range"><button data-v="24">24h</button><button data-v="168">7 days</button><button data-v="720">30 days</button><button data-v="9600">All</button></div>
+</div>
+<div class="grid">
+  <section class="card c8"><h2>Tokens <em id="bucketnote"></em></h2>
+    <canvas id="usage" style="height:200px"></canvas>
+    <div class="legend"><span><b style="background:var(--accent)"></b>generated</span><span><b style="background:var(--system-purple)"></b>prompt evaluated</span><span><b style="background:var(--system-teal)"></b>reused from cache</span></div>
+  </section>
+  <section class="card c4"><h2>By day and hour <em>tokens, last 4 weeks</em></h2><div class="heat" id="heat"></div></section>
+</div>
+
+<div class="grid">
+  <section class="card c12" id="recentcard"><h2>Recent requests <em>from the server log</em></h2>
+    <table><thead><tr><th>Finished</th><th>Prompt tok</th><th>Prefill s</th><th>Prefill tok/s</th><th>Out tok</th><th>Decode tok/s</th><th>Total s</th><th>Finish</th></tr></thead>
+    <tbody id="rows"></tbody></table><div class="empty" id="norows" hidden>No completed requests in the log yet.</div>
+  </section>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const fmt=(v,d=1)=>v==null||isNaN(v)?'—':Number(v).toLocaleString(undefined,{maximumFractionDigits:d,minimumFractionDigits:d});
+const int=v=>v==null?'—':Math.round(v).toLocaleString();
+const si=v=>v==null?'—':v>=1e9?fmt(v/1e9,2)+'B':v>=1e6?fmt(v/1e6,2)+'M':v>=1e4?fmt(v/1e3,1)+'k':int(v);
+const pct=(v,d=1)=>v==null?'—':fmt(100*v,d)+'%';
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const dur=s=>s==null?'—':s<60?fmt(s,1)+' s':s<3600?fmt(s/60,1)+' min':s<86400?fmt(s/3600,1)+' h':fmt(s/86400,1)+' d';
+const kv=(el,rows)=>{$(el).innerHTML=rows.map(r=>'<span>'+r[0]+'</span><span>'+r[1]+'</span>').join('')};
+const chips=(el,o,pre='')=>{$(el).innerHTML=Object.entries(o||{}).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]).map(([k,v])=>'<span class="chip">'+pre+k+' <b>'+si(v)+'</b></span>').join('')};
+function setBig(id,val,unit,d=1){$(id).innerHTML=(val==null?'—':fmt(val,d))+(unit?'<small>'+unit+'</small>':'')}
+function ago(t,now){const s=Math.max(0,now-t);return s<60?Math.round(s)+'s ago':s<3600?Math.round(s/60)+'m ago':new Date(t*1000).toLocaleTimeString()}
+const store={get(k,d){try{return localStorage.getItem(k)||d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+function seg(id,key,def,cb){const el=$(id);let v=store.get(key,def);
+  const paint=()=>el.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  el.onclick=e=>{if(!e.target.dataset.v)return;v=e.target.dataset.v;store.set(key,v);paint();cb(v)};paint();return()=>v}
+
+function canvas(id){const c=$(id),dpr=devicePixelRatio||1,w=c.clientWidth,h=c.clientHeight;
+  c.width=w*dpr;c.height=h*dpr;const g=c.getContext('2d');g.scale(dpr,dpr);g.clearRect(0,0,w,h);
+  g.font='10px -apple-system,system-ui';return [g,w,h]}
+const nice=m=>{const p=Math.pow(10,Math.floor(Math.log10(m)));for(const s of [1,2,2.5,5,10])if(s*p>=m)return s*p;return 10*p};
+
+// Throughput: decode on the left axis, prefill (often 100x larger) on the right, acceptance as a 0-100% overlay.
+function drawThroughput(series,now,winMin){
+  const [g,w,h]=canvas('chart'),t0=now-winMin*60,L=34,B=18,T=6,R=44;
+  const pts=series.filter(p=>p.t>=t0);
+  const dtop=nice(Math.max(10,...pts.map(p=>p.decode))),ptop=nice(Math.max(100,...pts.map(p=>p.prefill)));
+  g.strokeStyle=css('--separator');g.lineWidth=1;
+  for(let i=0;i<=4;i++){const y=T+(h-T-B)*(1-i/4);g.beginPath();g.moveTo(L,y);g.lineTo(w-R,y);g.stroke();
+    g.fillStyle=css('--accent');g.textAlign='right';g.fillText(Math.round(dtop*i/4),L-5,y+3);
+    g.fillStyle=css('--system-purple');g.textAlign='left';g.fillText(si(ptop*i/4),w-R+5,y+3)}
+  const X=t=>L+(w-L-R)*(t-t0)/(now-t0);
+  g.fillStyle=css('--text-tertiary');g.textAlign='center';
+  for(let m=0;m<=winMin;m+=2)g.fillText(m===winMin?'now':'-'+(winMin-m)+'m',Math.min(X(t0+m*60),w-R-10),h-4);
+  const line=(key,col,top,width,dash)=>{g.strokeStyle=css(col);g.lineWidth=width;g.setLineDash(dash||[]);g.beginPath();let on=false,lt=0;
+    for(const p of pts){const v=p[key];if(v==null||(key!=='accept'&&v<0.5)||p.t-lt>6){on=false}
+      if(v!=null&&(key==='accept'||v>=0.5)){const x=X(p.t),y=T+(h-T-B)*(1-Math.min(1,v/top));on?g.lineTo(x,y):g.moveTo(x,y);on=true}lt=p.t}
+    g.stroke();g.setLineDash([])};
+  line('prefill','--system-purple',ptop,1.5);line('accept','--system-orange',1,1.2,[3,3]);line('decode','--accent',dtop,2);
+  if(!pts.length){g.fillStyle=css('--text-tertiary');g.fillText('No samples yet',w/2,h/2)}
+}
+
+// In-flight requests over the last 10 min: the area is all active jobs, the line marks the slot count.
+function drawQueue(series,now){
+  const [g,w,h]=canvas('qspark'),t0=now-600,pts=series.filter(p=>p.t>=t0&&p.active!=null);
+  if(!pts.length)return;const top=Math.max(2,...pts.map(p=>p.active));
+  const X=t=>w*(t-t0)/600,Y=v=>h-2-(h-4)*v/top;
+  g.fillStyle=css('--system-orange');g.globalAlpha=.35;g.beginPath();g.moveTo(X(pts[0].t),h);
+  pts.forEach(p=>g.lineTo(X(p.t),Y(p.active)));g.lineTo(X(pts[pts.length-1].t),h);g.fill();g.globalAlpha=1;
+  g.strokeStyle=css('--text-tertiary');g.setLineDash([2,3]);g.beginPath();g.moveTo(0,Y(1));g.lineTo(w,Y(1));g.stroke();g.setLineDash([]);
+}
+
+function drawUsage(rows,hours){
+  const [g,w,h]=canvas('usage'),L=44,B=18,T=6,R=6;
+  const daily=hours>168,step=daily?86400:3600,now=Date.now()/1000;
+  const bucket=t=>daily?Math.floor((t-new Date(t*1000).getTimezoneOffset()*60)/86400):Math.floor(t/3600); // local-day buckets
+  const map=new Map();for(const r of rows){const k=bucket(r.hour);const o=map.get(k)||{g:0,p:0,c:0,t:r.hour};o.g+=r.gen_think+r.gen_resp;o.p+=r.prompt;o.c+=r.reused;map.set(k,o)}
+  let first=rows.length?bucket(rows[0].hour):bucket(now),last=bucket(now);
+  if(hours<9600)first=Math.max(first,last-Math.ceil(hours*3600/step)+1);else first=Math.min(first,last-6);
+  const keys=[];for(let k=first;k<=last;k++)keys.push(k);
+  const vals=keys.map(k=>map.get(k)||{g:0,p:0,c:0});
+  const top=nice(Math.max(1000,...vals.map(v=>v.g+v.p+v.c)));
+  g.strokeStyle=css('--separator');g.fillStyle=css('--text-tertiary');
+  for(let i=0;i<=4;i++){const y=T+(h-T-B)*(1-i/4);g.beginPath();g.moveTo(L,y);g.lineTo(w-R,y);g.stroke();g.textAlign='right';g.fillText(si(top*i/4),L-5,y+3)}
+  const bw=(w-L-R)/keys.length,Y=v=>(h-T-B)*v/top;
+  vals.forEach((v,i)=>{let y=h-B;for(const [k,col] of [['c','--system-teal'],['p','--system-purple'],['g','--accent']]){const hh=Y(v[k]);if(hh>0){g.fillStyle=css(col);g.fillRect(L+i*bw+bw*.12,y-hh,Math.max(1,bw*.76),hh);y-=hh}}});
+  g.fillStyle=css('--text-tertiary');g.textAlign='center';const every=Math.max(1,Math.ceil(keys.length/8));
+  keys.forEach((k,i)=>{if((keys.length-1-i)%every)return;const d=daily?new Date(k*86400000+new Date(k*86400000).getTimezoneOffset()*60000):new Date(k*3600000);
+    const lab=daily||hours>24?(d.getMonth()+1)+'/'+d.getDate()+(daily?'':' '+d.getHours()+'h'):d.getHours()+':00';
+    g.fillText(lab,Math.min(Math.max(L+i*bw+bw/2,L+16),w-R-16),h-4)});
+  $('bucketnote').textContent=daily?'per day':'per hour';
+}
+
+function drawHeat(rows){
+  const cells={},now=new Date(),days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];let mx=0;
+  for(const r of rows){const d=new Date(r.hour*1000),k=d.getDay()+'-'+d.getHours();cells[k]=(cells[k]||0)+r.gen_think+r.gen_resp+r.prompt;mx=Math.max(mx,cells[k])}
+  let html='<span></span>';for(let hr=0;hr<24;hr++)html+='<span>'+(hr%6?'':hr)+'</span>';
+  for(let i=1;i<=7;i++){const day=(now.getDay()+i)%7;html+='<span class="d">'+days[day]+'</span>';
+    for(let hr=0;hr<24;hr++){const v=cells[day+'-'+hr]||0,a=v&&mx?0.18+0.82*Math.sqrt(v/mx):0;
+      html+='<i title="'+days[day]+' '+hr+':00 · '+si(v)+' tokens" style="'+(a?'background:color-mix(in srgb,var(--heat) '+Math.round(a*100)+'%,var(--heat0))':'')+'"></i>'}}
+  $('heat').innerHTML=html;
+}
+
+function renderTotals(d){
+  const m=d.metrics||{},on=m.available,scope=getScope();
+  const T=scope==='alltime'?d.alltime:(on?m.session:null);
+  if(scope==='session')$('scopenote').textContent=on?'since ds4-server start · busy time since '+new Date(m.session_start*1000).toLocaleTimeString():'needs /metrics';
+  else $('scopenote').textContent=d.alltime&&d.alltime.first_hour?'since '+new Date(d.alltime.first_hour*1000).toLocaleDateString()+' · persisted across restarts':'nothing recorded yet';
+  $('totals').style.opacity=T?1:.45;if(!T)return;
+  $('t_req').textContent=si(T.requests);
+  const busy=T.prefill_busy+T.decode_busy;
+  const span=scope==='alltime'?(d.alltime.first_hour?d.now-d.alltime.first_hour:0):(on?d.now-m.session_start:0);
+  $('t_reqsub').textContent=span?'busy '+pct(Math.min(1,busy/span),0)+' of '+dur(span):' ';
+  $('t_prompt').textContent=si(T.prompt_tokens);
+  $('t_cache').textContent=pct(T.cache_efficiency,0);
+  $('t_cachesub').textContent=si(T.reused_tokens)+' tokens reused';
+  $('t_gen').textContent=si(T.gen_tokens);
+  const gt=T.gen_tokens||1;$('t_gensplit').innerHTML='<i style="width:'+100*T.gen_think/gt+'%;background:var(--system-orange)"></i><i style="width:'+100*T.gen_resp/gt+'%;background:var(--accent)"></i>';
+  $('t_gensub').textContent=si(T.gen_think)+' thinking · '+si(T.gen_resp)+' response';
+  $('t_apre').innerHTML=fmt(T.avg_prefill_tps,0)+'<small>tok/s</small>';
+  $('t_apresub').textContent='excl. cached · '+dur(T.prefill_busy)+' busy';
+  $('t_adec').innerHTML=fmt(T.avg_decode_tps,1)+'<small>tok/s</small>';
+  $('t_adecsub').textContent=dur(T.decode_busy)+' decoding';
+  kv('lat',[['Request p50',T.latency.p50==null?'—':dur(T.latency.p50)],['Request p95',T.latency.p95==null?'—':dur(T.latency.p95)],
+    ['Request mean',T.latency.mean==null?'—':dur(T.latency.mean)],['Prefill p50 / p95',(T.prompt_latency.p50==null?'—':dur(T.prompt_latency.p50))+' / '+(T.prompt_latency.p95==null?'—':dur(T.prompt_latency.p95))]]);
+  chips('fin',T.finish);
+  kv('cache',[['Reused tokens',si(T.reused_tokens)],['Evaluated tokens',si(T.prompt_tokens)],['KV stores',si(T.kv_stores)+' · '+fmt(T.kv_bytes/1073741824,2)+' GiB']]);
+  $('srcs').innerHTML=Object.entries(T.kv_hit||{}).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]).map(([k,v])=>'<span class="chip">hit: '+k+' <b>'+si(v)+'</b>'+((T.reuse_src||{})[k]?' · '+si(T.reuse_src[k])+' tok':'')+'</span>').join('');chips('miss',T.kv_miss,'miss: ');
+  const sp=T.spec;$('speccard').style.opacity=sp?1:.45;
+  if(sp){$('acc').innerHTML=pct(sp.accept_rate)+'<small>of drafted tokens accepted</small>';
+    $('accsub').textContent=fmt(sp.per_cycle,2)+' accepted per cycle · '+si(sp.cycles)+' cycles · '+si(sp.accepted)+' / '+si(sp.draft)+' tokens';
+    const mx=Math.max(1,...sp.hist.map(x=>x[1]));let lastNZ=0;sp.hist.forEach(([n,c])=>{if(c)lastNZ=n});
+    $('hist').innerHTML=sp.hist.filter(([n])=>n<=Math.max(lastNZ,7)).map(([n,c])=>'<div title="'+n+' accepted: '+int(c)+' cycles ('+pct(c/sp.cycles)+')"><i style="height:'+(80*c/mx)+'px"></i><span>'+n+'</span></div>').join('')}
+  else{$('acc').innerHTML='—';$('accsub').textContent='Start ds4-server with DSpark and DS4_DSPARK_STATS=1';$('hist').innerHTML=''}
+}
+
+function renderRecords(d){
+  const r=(d.metrics&&d.metrics.records)||{},cards=[
+    ['Best decode',r.best_decode_avg,v=>fmt(v,1)+'<small>tok/s request avg</small>'],
+    ['Best prefill',r.best_prefill_avg,v=>fmt(v,0)+'<small>tok/s request avg</small>'],
+    ['Largest context',r.peak_context_tokens,v=>si(v)+'<small>tokens</small>'],
+    ['Most queued',r.peak_queued,v=>int(v)+'<small>requests waiting</small>'],
+    ['Busiest hour',busiest,v=>si(v.v)+'<small>tokens</small>']];
+  $('records').innerHTML=cards.map(([k,x,f])=>'<section class="card"><h2>'+k+'</h2><div class="mid">'+(x&&x.v!=null?f(k==='Busiest hour'?x:x.v):'—')+'</div><div class="sub">'+
+    (x&&x.t?new Date(x.t*1000).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'&nbsp;')+'</div></section>').join('');
+}
+
+function render(d){
+  const p=d.proc||{},sys=d.system||{},eng=d.engine||{},req=d.req;
+  const m=d.metrics&&d.metrics.available?d.metrics:null;
+  const mx=d.metrics||{},se=mx.store_error;
+  $('src').textContent=(m?'source: /metrics · '+fmt(m.scrape_ms,1)+' ms scrape':'source: server log'+(mx.error?' ('+mx.error+')':' (no /metrics)'))+
+    (se?' · history not saving since '+new Date(se.t*1000).toLocaleTimeString()+': '+se.msg:'');
+  $('src').style.color=se?'var(--status-error)':'';
+  const phase=m?(m.rate_now.prefill>0.5?'prefill':m.rate_now.decode>0.5?'decode':m.active>0?'working':'idle'):d.phase;
+  $('state').className='pill '+(!p.alive&&!m?'err':phase==='idle'?'ok':'busy');
+  $('statetxt').textContent=!p.alive&&!m?'engine down':{idle:'idle',prefill:'prefilling',decode:'decoding',working:'working'}[phase];
+  $('eng').textContent=p.alive?'pid '+p.pid+' · up '+p.uptime:'';
+  $('queuebar').hidden=!m;
+  if(m){$('q_run').textContent=int(m.running);$('q_wait').textContent=int(m.queued);
+    $('q_wait').style.color=m.queued>0?'var(--system-orange)':'';
+    const r=m.records&&m.records.peak_queued;
+    $('q_note').textContent=(m.ctx_slots.length>1?m.ctx_slots.length+' slots · ':'1 slot · ')+(r?'most queued '+int(r.v)+' at '+new Date(r.t*1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'nothing queued yet');
+    drawQueue(m.series,d.now)}
+
+  const last=k=>{for(let i=d.series.length-1;i>=0;i--)if(d.series[i].k===k)return d.series[i];return null};
+  const fresh=s=>s&&d.now-s.t<8,ld=last('decode'),lp=last('prefill');
+  setBig('dec',m?(m.rate_now.decode>0.5?m.rate_now.decode:null):(phase==='decode'&&fresh(ld)?ld.v:null),'tok/s');
+  $('decsub').textContent=m&&m.tps.decode_avg?'request avg '+fmt(m.tps.decode_avg)+' tok/s (server)':req&&req.decode_avg?'avg '+fmt(req.decode_avg)+' tok/s this request':' ';
+  setBig('pre',m?(m.rate_now.prefill>0.5?(m.tps.prefill_chunk||m.tps.prefill_avg||m.rate_now.prefill):null):(phase==='prefill'?(fresh(lp)?lp.v:(req&&req.prefill_avg)||null):null),'tok/s',0);
+  const pb=$('prebar');
+  if(req&&phase==='prefill'){pb.firstElementChild.style.width=100*req.prefill_done/req.prompt_tokens+'%';
+    $('presub').textContent=int(req.prefill_done)+' / '+int(req.prompt_tokens)+' tokens'}
+  else{pb.firstElementChild.style.width='0';$('presub').textContent=m&&m.tps.prefill_avg?'last prompt avg '+fmt(m.tps.prefill_avg,0)+' tok/s (server)':' '}
+
+  const max=m&&m.ctx_limit||eng.ctx||null,used=m&&m.ctx_slots.length?Math.max(...m.ctx_slots):(req?req.ctx_to+(req.gen||0):(d.recent[0]?d.recent[0].ctx_to:null));
+  $('ctx').textContent=used==null?'—':int(used);
+  $('ctxsub').textContent=max?'of '+int(max)+' ('+fmt(100*used/max,1)+'%)'+(m&&m.ctx_slots.length>1?' · '+m.ctx_slots.length+' slots':''):' ';
+  const cb=$('ctxbar');cb.firstElementChild.style.width=(max&&used?Math.min(100,100*used/max):0)+'%';
+  cb.className='bar'+(max&&used/max>.9?' err':max&&used/max>.7?' warn':'');
+
+  const S=m&&m.session&&m.session.spec;
+  $('accnow').innerHTML=m&&m.rate_now.accept!=null?pct(m.rate_now.accept)+'<small>accepted</small>':'—';
+  $('accnowsub').textContent=!m?'needs /metrics':!m.has_spec?'DSpark stats off (DS4_DSPARK_STATS=1)':S?'session '+pct(S.accept_rate)+' · '+fmt(S.per_cycle,2)+' per cycle':'waiting for decode';
+  $('acclegend').hidden=!(m&&m.has_spec);
+
+  kv('mem',[['ds4-server RSS',p.alive?fmt(p.rss_gib)+' GiB':'—'],['Model resident',eng.model_gib?fmt(eng.model_gib)+' GiB':'—'],
+    ['KV buffers',eng.kv_gib?fmt(eng.kv_gib)+' GiB':'—'],['Requests running / queued',m?int(m.running)+' / '+int(m.queued):'—'],
+    ['GPU utilisation',sys.gpu&&sys.gpu.util!=null?sys.gpu.util+'%':'—'],['GPU memory in use',sys.gpu&&sys.gpu.mem_gib!=null?fmt(sys.gpu.mem_gib)+' GiB':'—'],
+    ['System available',fmt(sys.available_gib)+' of '+fmt(sys.total_gib,0)+' GiB'],['Swap used',sys.swap_used_mib!=null?fmt(sys.swap_used_mib,0)+' MiB':'—'],
+    ['Pressure',sys.pressure||'—']]);
+
+  renderTotals(d);renderRecords(d);
+  $('rows').innerHTML=d.recent.slice(0,15).map(r=>'<tr><td>'+ago(r.end,d.now)+'</td><td>'+int(r.prompt_tokens)+'</td><td>'+fmt(r.prefill_s)+'</td><td>'+
+    (r.prefill_s&&r.prompt_tokens?fmt(r.prompt_tokens/r.prefill_s,0):'—')+'</td><td>'+int(r.gen)+'</td><td>'+fmt(r.decode_avg)+'</td><td>'+fmt(r.total_s)+'</td><td>'+r.finish+'</td></tr>').join('');
+  $('norows').hidden=d.recent.length>0;$('recentcard').hidden=!!m&&!d.recent.length;
+  drawThroughput(m?m.series:d.series.map(s=>({t:s.t,decode:s.k==='decode'?s.v:null,prefill:s.k==='prefill'?s.v:null})),d.now,10);
+}
+
+let last=null,busiest=null,down=0;
+const getScope=seg('scope','ds4.scope','session',()=>last&&renderTotals(last));
+const getRange=seg('range','ds4.range','168',()=>loadHistory());
+async function loadHistory(){
+  const get=u=>fetch(u,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error(u+' '+r.status);return r.json()});
+  try{const hours=+getRange(),[rows,heat]=await Promise.all([get('api/history?hours='+hours),get('api/history?hours=672')]);
+    drawUsage(rows,hours);drawHeat(heat);
+    const all=await get('api/history?hours=9600');
+    busiest=all.reduce((b,r)=>{const v=r.gen_think+r.gen_resp+r.prompt;return v>(b?b.v:0)?{v,t:r.hour}:b},null);
+    const tot=rows.reduce((s,r)=>s+r.gen_think+r.gen_resp+r.prompt,0);
+    $('histnote').textContent=si(tot)+' tokens in range';
+    if(last)renderRecords(last);
+    $('usage').style.opacity=$('heat').style.opacity=1;
+  }catch(e){$('histnote').textContent='history unavailable: '+e.message;$('usage').style.opacity=$('heat').style.opacity=.4}
+}
+async function tick(){
+  try{const r=await fetch('api/telemetry',{cache:'no-store'});last=await r.json();render(last);down=0}
+  catch(e){if(++down>2){$('state').className='pill err';$('statetxt').textContent='dashboard offline'}}
+}
+tick();loadHistory();setInterval(tick,1000);setInterval(loadHistory,15000);
+addEventListener('resize',()=>{if(last)render(last);loadHistory()});
+</script>
+</body>
+</html>

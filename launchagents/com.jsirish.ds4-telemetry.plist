@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.jsirish.ds4-telemetry</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>__HOME__/ds4-telemetry/server.py</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>__HOME__/ds4-telemetry</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>DS4_TELEM_PORT</key>
+        <string>8767</string>
+        <key>DS4_LOG</key>
+        <string>__HOME__/.ds4/logs/ds4-server-8000.log</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+    <key>StandardOutPath</key>
+    <string>__HOME__/.ds4/logs/ds4-telemetry.log</string>
+    <key>StandardErrorPath</key>
+    <string>__HOME__/.ds4/logs/ds4-telemetry.log</string>
+</dict>
+</plist>
