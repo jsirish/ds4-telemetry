@@ -41,6 +41,7 @@ To view it from other machines on a tailnet: `tailscale serve --bg --https=8443 
 
 With `/metrics`:
 
+- Loaded model under the title: name and context from `/v1/models`, GGUF file, DSpark and vision from the server's command line
 - Real time: decode and prefill tok/s from counter rates over a 3 s window, context per slot, requests in flight, DSpark acceptance over the last 10 s, 10 minute throughput chart
 - Totals, Session or All-time: requests, prompt tokens, cache efficiency, generated tokens (thinking vs response), average prefill and decode speed over busy time, request and prefill latency percentiles, finish reasons, KV cache hits and misses, DSpark acceptance and accepted-length histogram
 - Records: peak decode and prefill rate, largest context, busiest hour

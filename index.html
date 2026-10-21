@@ -28,6 +28,9 @@ main{max-width:1200px;margin:0 auto;padding:var(--gutter)}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:var(--gutter)}
 h1{font-size:var(--page-title);margin:0;font-weight:600}
 h1 small,.src{font-size:var(--annotation);color:var(--text-secondary);font-weight:400;margin-left:8px}
+.model{color:var(--text-secondary);font-size:var(--body-size);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.model b{color:var(--text-primary);font-weight:600}
+.model .chip{font-size:.625rem}
 .hdr-r{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;
   background:var(--surface-control);font-size:var(--annotation);text-transform:uppercase;letter-spacing:.04em}
@@ -86,7 +89,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <main>
 <header>
-  <h1>DS4 Telemetry<small id="eng"></small></h1>
+  <div><h1>DS4 Telemetry<small id="eng"></small></h1><div class="model" id="model"></div></div>
   <div class="hdr-r"><span class="src" id="src"></span>
     <span class="pill" id="state"><span class="dot"></span><span id="statetxt">connecting</span></span></div>
 </header>
@@ -301,6 +304,10 @@ function render(d){
   $('state').className='pill '+(!p.alive&&!m?'err':phase==='idle'?'ok':'busy');
   $('statetxt').textContent=!p.alive&&!m?'engine down':{idle:'idle',prefill:'prefilling',decode:'decoding',working:'working'}[phase];
   $('eng').textContent=p.alive?'pid '+p.pid+' · up '+p.uptime:'';
+  const md=d.model||{},esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  $('model').innerHTML=md.name||md.gguf?(md.name?'<b>'+esc(md.name)+'</b>':'')+(md.gguf?'<span title="'+esc(md.gguf)+'">'+esc(md.gguf.replace(/\.gguf$/,''))+'</span>':'')+
+    (md.context_length?'<span class="chip">'+si(md.context_length)+' ctx</span>':'')+(md.dspark?'<span class="chip" title="'+esc(md.drafter||'')+'">DSpark</span>':'')+
+    (md.vision?'<span class="chip" title="'+esc(md.vision)+'">vision</span>':''):'';
   $('queuebar').hidden=!m;
   if(m){$('q_run').textContent=int(m.running);$('q_wait').textContent=int(m.queued);
     $('q_wait').style.color=m.queued>0?'var(--system-orange)':'';
